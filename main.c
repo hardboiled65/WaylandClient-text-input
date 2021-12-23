@@ -231,7 +231,7 @@ int main(void)
 
 	//
 
-	Client_loop_simple(p);
+    Client_loop_simple(p);
 
 	//解放
 

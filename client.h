@@ -75,16 +75,10 @@ enum
 
 Client *Client_new(int size);
 void Client_destroy(Client *p);
+void Client_loop_simple(Client *p);
 
 void Client_init(Client *p);
 void Client_add_init_sync(Client *p);
-void Client_loop_simple(Client *p);
-void Client_loop_poll(Client *p);
-
-void Client_poll_add(Client *p,int fd,int events,poll_handle handle);
-void Client_poll_delete(Client *p,int fd);
-void Client_poll_clear(Client *p);
-
 
 /*---- Window ----*/
 

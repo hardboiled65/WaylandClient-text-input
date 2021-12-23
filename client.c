@@ -191,7 +191,8 @@ static void _registry_global(
 		 * フラグが ON の時のみ処理 */
 
 		if(ver >= 5) ver = 5;
-		
+
+        fprintf(stderr, "wl_seat - version: %d\n", ver);
 		p->seat = wl_registry_bind(reg, id, &wl_seat_interface, ver);
 		p->seat_ver = ver;
 
@@ -230,11 +231,7 @@ void Client_destroy(Client *p)
 	
 		if(p->destroy)
 			(p->destroy)(p);
-	
-		//poll
 
-		Client_poll_clear(p);
-	
 		//wl_seat
 
 		if(p->pointer)
@@ -332,106 +329,6 @@ void Client_loop_simple(Client *p)
 {
 	while(wl_display_dispatch(p->display) != -1 && p->finish_loop == 0);
 }
-
-/* イベントループ (poll) */
-
-void Client_loop_poll(Client *p)
-{
-	struct pollfd fds[10];
-	int i,num;
-	PollItem *pi,*ptr[10];
-
-	//fds[0] は Wayland イベント用
-
-	fds[0].fd = wl_display_get_fd(p->display);
-	fds[0].events = POLLIN;
-
-	//
-
-	while(!p->finish_loop)
-	{
-		wl_display_flush(p->display);
-
-		//fds にセット (1〜)
-
-		num = 1;
-
-		wl_list_for_each(pi, &p->list_poll, i)
-		{
-			fds[num].fd = pi->fd;
-			fds[num].events = pi->events;
-			ptr[num] = pi;
-
-			num++;
-			if(num == 10) break;
-		}
-
-		//
-
-		poll(fds, num, -1);
-
-		if(fds[0].revents & POLLIN)
-			wl_display_dispatch(p->display);
-
-		for(i = 1; i < num; i++)
-		{
-			if(fds[i].revents)
-				(ptr[i]->handle)(p, fds[i].fd, fds[i].revents);
-		}
-	}
-}
-
-/* poll 追加 */
-
-void Client_poll_add(Client *p,int fd,int events,poll_handle handle)
-{
-	PollItem *pi;
-
-	pi = (PollItem *)calloc(1, sizeof(PollItem));
-	if(!pi) return;
-
-	pi->fd = fd;
-	pi->events = events;
-	pi->handle = handle;
-
-	wl_list_insert(p->list_poll.prev, &pi->i);
-}
-
-/* poll 削除 */
-
-void Client_poll_delete(Client *p,int fd)
-{
-	PollItem *pi;
-
-	wl_list_for_each(pi, &p->list_poll, i)
-	{
-		if(pi->fd == fd)
-		{
-			close(fd);
-			wl_list_remove(&pi->i);
-
-			free(pi);
-			break;
-		}
-	}
-}
-
-/* poll 全て削除 */
-
-void Client_poll_clear(Client *p)
-{
-	PollItem *pi,*tmp;
-
-	wl_list_for_each_safe(pi, tmp, &p->list_poll, i)
-	{
-		close(pi->fd);
-		
-		wl_list_remove(&pi->i);
-
-		free(pi);
-	}
-}
-
 
 //========================
 // Window
